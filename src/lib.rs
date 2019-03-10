@@ -50,16 +50,18 @@ impl<T: Default> AbbrevTree<T> {
         ));
     }
 
-    pub fn complete(&self, item: &str) -> Vec<String> {
+    pub fn complete<'d>(&'d self, item: &str) -> Vec<(String, &'d T)> {
         let mut v = Vec::new();
         self._complete("", item, &mut v);
         v
     }
 
     // TODO: This mega-sucks.
-    fn _complete(&self, left: &str, item: &str, v: &mut Vec<String>) {
+    fn _complete<'d>(
+        &'d self, left: &str, item: &str, v: &mut Vec<(String, &'d T)>
+    ) {
         if self.v.len() == 0 && item == "" {
-            v.push(left.to_string());
+            v.push((left.to_string(), &self.data));
         }
 
         for (chunk, subtree) in &self.v {
@@ -143,36 +145,40 @@ fn test_abbrev_tree() {
     t.add("lshw", ());
     println!("{:?}", t);
 
-    assert_eq!(t.complete("c"), vec![
+    fn first<A, B, I: IntoIterator<Item = (A, B)>>(i: I) -> Vec<A> {
+        i.into_iter().map(|x: (_, _)| x.0).collect()
+    }
+
+    assert_eq!(first(t.complete("c")), vec![
         "cat".to_string(),
         "cargo".to_string(),
         "chmod".to_string(),
         "chown".to_string(),
     ]);
-    assert_eq!(t.complete("ca"), vec![
+    assert_eq!(first(t.complete("ca")), vec![
         "cat".to_string(),
         "cargo".to_string(),
     ]);
-    assert_eq!(t.complete("cat"), vec!["cat".to_string()]);
-    assert_eq!(t.complete("ch"), vec![
+    assert_eq!(first(t.complete("cat")), vec!["cat".to_string()]);
+    assert_eq!(first(t.complete("ch")), vec![
         "chmod".to_string(),
         "chown".to_string(),
     ]);
-    assert_eq!(t.complete("cho"), vec!["chown".to_string()]);
-    assert_eq!(t.complete("chow"), vec!["chown".to_string()]);
-    assert_eq!(t.complete("chown"), vec!["chown".to_string()]);
-    assert_eq!(t.complete("l"), vec![
+    assert_eq!(first(t.complete("cho")), vec!["chown".to_string()]);
+    assert_eq!(first(t.complete("chow")), vec!["chown".to_string()]);
+    assert_eq!(first(t.complete("chown")), vec!["chown".to_string()]);
+    assert_eq!(first(t.complete("l")), vec![
         "ls".to_string(),
         "lshw".to_string(),
     ]);
-    assert_eq!(t.complete("ls"), vec![
+    assert_eq!(first(t.complete("ls")), vec![
         "ls".to_string(),
         "lshw".to_string(),
     ]);
-    assert_eq!(t.complete("lsh"), vec!["lshw".to_string()]);
-    assert_eq!(t.complete("lshw"), vec!["lshw".to_string()]);
-    assert_eq!(t.complete("x"), Vec::<String>::new());
-    assert_eq!(t.complete("xyz"), Vec::<String>::new());
+    assert_eq!(first(t.complete("lsh")), vec!["lshw".to_string()]);
+    assert_eq!(first(t.complete("lshw")), vec!["lshw".to_string()]);
+    assert_eq!(first(t.complete("x")), Vec::<String>::new());
+    assert_eq!(first(t.complete("xyz")), Vec::<String>::new());
 }
 
 fn common_prefix_length(a: &str, b: &str) -> usize {
