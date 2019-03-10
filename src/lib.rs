@@ -7,13 +7,8 @@ impl AbbrevTree {
         AbbrevTree(Vec::new())
     }
 
-    pub fn add(&mut self, item: &str) {
-        self._add(item, true)
-    }
-
     // TODO: Recursion is probably bad but oh well.
-    // TODO: is_root sucks.
-    fn _add(&mut self, item: &str, is_root: bool) {
+    pub fn add(&mut self, item: &str) {
         // Find match.
         for (chunk, subtree) in &mut self.0 {
             let prefix_len = common_prefix_length(chunk, item);
@@ -21,7 +16,13 @@ impl AbbrevTree {
                 if prefix_len == chunk.len() {
                     // Full match. Recurse. (Optimize for the case where item
                     // doesn't already exist.)
-                    return subtree._add(&item[prefix_len..], false);
+                    if subtree.0.len() == 0 {
+                        subtree.0.push((
+                            "".to_string(),
+                            AbbrevTree::new(),
+                        ))
+                    }
+                    return subtree.add(&item[prefix_len..]);
                 } else {
                     // Partial match. Split and then add.
                     let chunk_suffix = chunk.split_off(prefix_len);
@@ -30,18 +31,12 @@ impl AbbrevTree {
                         chunk_suffix,
                         AbbrevTree(v),
                     ));
-                    return subtree._add(&item[prefix_len..], false);
+                    return subtree.add(&item[prefix_len..]);
                 }
             }
         }
 
         // Else add new subtree.
-        if self.0.len() == 0 && !is_root {
-            self.0.push((
-                "".to_string(),
-                AbbrevTree::new(),
-            ));
-        }
         self.0.push((
             item.to_string(),
             AbbrevTree::new(),
