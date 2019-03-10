@@ -1,3 +1,5 @@
+use std::fmt;
+
 enum Completion {
     Zero,
     One(String),
@@ -63,6 +65,32 @@ impl AbbrevTree {
      *    }
      *}
      */
+}
+
+impl fmt::Debug for AbbrevTree {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut stack = vec![self.0.iter()];
+        let mut first = true;
+        while stack.len() > 0 {
+            match stack.last_mut().unwrap().next() {
+                Some(x) => {
+                    if !first {
+                        write!(f, "\n")?;
+                    }
+                    write!(
+                        f,
+                        "{}{:?}",
+                        " ".repeat(2 * (stack.len()-1)),
+                        x.0,
+                    )?;
+                    stack.push((x.1).0.iter());
+                },
+                None => { stack.pop(); },
+            }
+            first = false;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
