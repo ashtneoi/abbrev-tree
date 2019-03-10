@@ -1,45 +1,55 @@
 use std::fmt;
+use std::mem;
 
-pub struct AbbrevTree(Vec<(String, AbbrevTree)>);
+pub struct AbbrevTree<T> {
+    v: Vec<(String, AbbrevTree<T>)>,
+    pub data: T,
+}
 
-impl AbbrevTree {
-    pub fn new() -> Self {
-        AbbrevTree(Vec::new())
+impl<T> AbbrevTree<T> {
+    // TODO: This should use Default::default().
+    pub fn new(data: T) -> Self {
+        AbbrevTree { v: Vec::new(), data }
     }
+}
 
+impl<T: Default> AbbrevTree<T> {
     // TODO: Recursion is probably bad but oh well.
-    pub fn add(&mut self, item: &str) {
+    pub fn add(&mut self, item: &str, data: T) {
         // Find match.
-        for (chunk, subtree) in &mut self.0 {
+        for (chunk, subtree) in &mut self.v {
             let prefix_len = common_prefix_length(chunk, item);
             if prefix_len > 0 {
                 if prefix_len == chunk.len() {
-                    // Full match. Recurse. (Optimize for the case where item
-                    // doesn't already exist.)
-                    if subtree.0.len() == 0 {
-                        subtree.0.push((
+                    // Full match. Recurse.
+                    if subtree.v.len() == 0 {
+                        let d = mem::replace(
+                            &mut subtree.data, Default::default()
+                        );
+                        subtree.v.push((
                             "".to_string(),
-                            AbbrevTree::new(),
+                            AbbrevTree::new(d),
                         ))
                     }
-                    return subtree.add(&item[prefix_len..]);
+                    return subtree.add(&item[prefix_len..], data);
                 } else {
                     // Partial match. Split and then add.
                     let chunk_suffix = chunk.split_off(prefix_len);
-                    let v: Vec<_> = subtree.0.drain(..).collect();
-                    subtree.0.push((
+                    let d = mem::replace(&mut subtree.data, Default::default());
+                    let v: Vec<_> = subtree.v.drain(..).collect();
+                    subtree.v.push((
                         chunk_suffix,
-                        AbbrevTree(v),
+                        AbbrevTree { v, data: d },
                     ));
-                    return subtree.add(&item[prefix_len..]);
+                    return subtree.add(&item[prefix_len..], data);
                 }
             }
         }
 
         // Else add new subtree.
-        self.0.push((
+        self.v.push((
             item.to_string(),
-            AbbrevTree::new(),
+            AbbrevTree::new(data),
         ));
     }
 
@@ -51,18 +61,11 @@ impl AbbrevTree {
 
     // TODO: This mega-sucks.
     fn _complete(&self, left: &str, item: &str, v: &mut Vec<String>) {
-        println!(
-            "_complete({:?}, {:?}, v)",
-            left,
-            item,
-        );
-        println!("{:?}", self);
-
-        if self.0.len() == 0 && item == "" {
+        if self.v.len() == 0 && item == "" {
             v.push(left.to_string());
         }
 
-        for (chunk, subtree) in &self.0 {
+        for (chunk, subtree) in &self.v {
             let prefix_len = common_prefix_length(chunk, item);
             if item == "" || item.len() == prefix_len
                     || chunk.len() == prefix_len {
@@ -74,10 +77,10 @@ impl AbbrevTree {
     }
 }
 
-impl fmt::Debug for AbbrevTree {
+impl<T> fmt::Debug for AbbrevTree<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // FIXME: We should check for f.alternate().
-        let mut stack = vec![self.0.iter()];
+        let mut stack = vec![self.v.iter()];
         let mut first = true;
         while stack.len() > 0 {
             match stack.last_mut().unwrap().next() {
@@ -91,7 +94,7 @@ impl fmt::Debug for AbbrevTree {
                         " ".repeat(2 * (stack.len()-1)),
                         x.0,
                     )?;
-                    stack.push((x.1).0.iter());
+                    stack.push((x.1).v.iter());
                 },
                 None => { stack.pop(); },
             }
@@ -104,43 +107,43 @@ impl fmt::Debug for AbbrevTree {
 #[cfg(test)]
 #[test]
 fn test_abbrev_tree() {
-    let mut t = AbbrevTree::new();
+    let mut t = AbbrevTree::new(());
     println!("{:?}", t);
-    assert_eq!(t.0.len(), 0);
+    assert_eq!(t.v.len(), 0);
 
-    t.add("cat");
+    t.add("cat", ());
     println!("{:?}", t);
-    assert_eq!(t.0.len(), 1);
-    assert_eq!(t.0[0].0, "cat");
-    assert_eq!((t.0[0].1).0.len(), 0);
+    assert_eq!(t.v.len(), 1);
+    assert_eq!(t.v[0].0, "cat");
+    assert_eq!((t.v[0].1).v.len(), 0);
 
-    t.add("cargo");
+    t.add("cargo", ());
     println!("{:?}", t);
-    assert_eq!(t.0.len(), 1);
-    assert_eq!(t.0[0].0, "ca");
-    assert_eq!((t.0[0].1).0.len(), 2);
-    assert_eq!((t.0[0].1).0[0].0, "t");
-    assert_eq!(((t.0[0].1).0[0].1).0.len(), 0);
-    assert_eq!((t.0[0].1).0[1].0, "rgo");
-    assert_eq!(((t.0[0].1).0[1].1).0.len(), 0);
+    assert_eq!(t.v.len(), 1);
+    assert_eq!(t.v[0].0, "ca");
+    assert_eq!((t.v[0].1).v.len(), 2);
+    assert_eq!((t.v[0].1).v[0].0, "t");
+    assert_eq!(((t.v[0].1).v[0].1).v.len(), 0);
+    assert_eq!((t.v[0].1).v[1].0, "rgo");
+    assert_eq!(((t.v[0].1).v[1].1).v.len(), 0);
 
-    t.add("chmod");
+    t.add("chmod", ());
     println!("{:?}", t);
-    assert_eq!(t.0.len(), 1);
-    assert_eq!(t.0[0].0, "c");
+    assert_eq!(t.v.len(), 1);
+    assert_eq!(t.v[0].0, "c");
 
-    t.add("chown");
+    t.add("chown", ());
     println!("{:?}", t);
-    assert_eq!(t.0.len(), 1);
-    assert_eq!(t.0[0].0, "c");
+    assert_eq!(t.v.len(), 1);
+    assert_eq!(t.v[0].0, "c");
 
-    t.add("ls");
+    t.add("ls", ());
     println!("{:?}", t);
-    assert_eq!(t.0.len(), 2);
-    assert_eq!(t.0[0].0, "c");
-    assert_eq!(t.0[1].0, "ls");
+    assert_eq!(t.v.len(), 2);
+    assert_eq!(t.v[0].0, "c");
+    assert_eq!(t.v[1].0, "ls");
 
-    t.add("lshw");
+    t.add("lshw", ());
     println!("{:?}", t);
 
     assert_eq!(t.complete("c"), vec![
