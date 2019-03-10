@@ -74,6 +74,29 @@ impl<T: Default> AbbrevTree<T> {
             }
         }
     }
+
+    pub fn get_mut<'d>(&'d mut self, item: &str) -> Option<&'d mut T> {
+        self._get_mut("", item)
+    }
+
+    // TODO: This mega-sucks.
+    fn _get_mut<'d>(&'d mut self, left: &str, item: &str) -> Option<&'d mut T> {
+        if self.v.len() == 0 && item == "" {
+            return Some(&mut self.data);
+        }
+
+        for (chunk, subtree) in &mut self.v {
+            let prefix_len = common_prefix_length(chunk, item);
+            if item.len() == prefix_len
+                    || chunk.len() == prefix_len {
+                let mut s = left.to_string();
+                s.push_str(chunk);
+                return subtree._get_mut(&s, &item[prefix_len..]);
+            }
+        }
+
+        None
+    }
 }
 
 impl<T> fmt::Debug for AbbrevTree<T> {
@@ -179,6 +202,16 @@ fn test_abbrev_tree() {
     assert_eq!(first(t.complete("lshw")), vec!["lshw".to_string()]);
     assert_eq!(first(t.complete("x")), Vec::<String>::new());
     assert_eq!(first(t.complete("xyz")), Vec::<String>::new());
+
+    assert!(t.get_mut("c").is_none());
+    assert!(t.get_mut("ca").is_none());
+    t.get_mut("cat").unwrap();
+    t.get_mut("cargo").unwrap();
+    t.get_mut("chmod").unwrap();
+    t.get_mut("chown").unwrap();
+    t.get_mut("ls").unwrap();
+    t.get_mut("lshw").unwrap();
+    assert!(t.get_mut("xyz").is_none());
 }
 
 fn common_prefix_length(a: &str, b: &str) -> usize {
