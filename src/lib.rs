@@ -13,32 +13,43 @@ impl AbbrevTree {
         AbbrevTree(Vec::new())
     }
 
-    // TODO: Recursion is probably bad but oh well.
     pub fn add(&mut self, item: &str) {
-        if item.len() == 0 {
-            return;
-        }
+        self._add(item, true)
+    }
+
+    // TODO: Recursion is probably bad but oh well.
+    // TODO: is_root sucks.
+    fn _add(&mut self, item: &str, is_root: bool) {
+        println!("add({:?})", item);
 
         // Find match.
         for (chunk, subtree) in &mut self.0 {
             let prefix_len = common_prefix_length(chunk, item);
-            if prefix_len == chunk.len() {
-                // Full match. Recurse. (Optimize for the case where item
-                // doesn't already exist.)
-                return subtree.add(&item[prefix_len..]);
-            } else if prefix_len > 0 {
-                // Partial match. Split and then add.
-                let chunk_suffix = chunk.split_off(prefix_len);
-                let v: Vec<_> = subtree.0.drain(..).collect();
-                subtree.0.push((
-                    chunk_suffix,
-                    AbbrevTree(v),
-                ));
-                return subtree.add(&item[prefix_len..]);
+            if prefix_len > 0 {
+                if prefix_len == chunk.len() {
+                    // Full match. Recurse. (Optimize for the case where item
+                    // doesn't already exist.)
+                    return subtree._add(&item[prefix_len..], false);
+                } else if prefix_len > 0 {
+                    // Partial match. Split and then add.
+                    let chunk_suffix = chunk.split_off(prefix_len);
+                    let v: Vec<_> = subtree.0.drain(..).collect();
+                    subtree.0.push((
+                        chunk_suffix,
+                        AbbrevTree(v),
+                    ));
+                    return subtree._add(&item[prefix_len..], false);
+                }
             }
         }
 
         // Else add new subtree.
+        if self.0.len() == 0 && !is_root {
+            self.0.push((
+                "".to_string(),
+                AbbrevTree::new(),
+            ));
+        }
         self.0.push((
             item.to_string(),
             AbbrevTree::new(),
@@ -69,6 +80,7 @@ impl AbbrevTree {
 
 impl fmt::Debug for AbbrevTree {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // FIXME: We should check for f.alternate().
         let mut stack = vec![self.0.iter()];
         let mut first = true;
         while stack.len() > 0 {
@@ -97,32 +109,43 @@ impl fmt::Debug for AbbrevTree {
 #[test]
 fn test_abbrev_tree() {
     let mut t = AbbrevTree::new();
+    println!("{:?}", t);
     assert_eq!(t.0.len(), 0);
 
     t.add("cat");
+    println!("{:?}", t);
     assert_eq!(t.0.len(), 1);
     assert_eq!(t.0[0].0, "cat");
     assert_eq!((t.0[0].1).0.len(), 0);
 
     t.add("cargo");
+    println!("{:?}", t);
     assert_eq!(t.0.len(), 1);
     assert_eq!(t.0[0].0, "ca");
     assert_eq!((t.0[0].1).0.len(), 2);
     assert_eq!((t.0[0].1).0[0].0, "t");
+    assert_eq!(((t.0[0].1).0[0].1).0.len(), 0);
     assert_eq!((t.0[0].1).0[1].0, "rgo");
+    assert_eq!(((t.0[0].1).0[1].1).0.len(), 0);
 
     t.add("chmod");
+    println!("{:?}", t);
     assert_eq!(t.0.len(), 1);
     assert_eq!(t.0[0].0, "c");
 
     t.add("chown");
+    println!("{:?}", t);
     assert_eq!(t.0.len(), 1);
     assert_eq!(t.0[0].0, "c");
 
     t.add("ls");
+    println!("{:?}", t);
     assert_eq!(t.0.len(), 2);
     assert_eq!(t.0[0].0, "c");
     assert_eq!(t.0[1].0, "ls");
+
+    t.add("lshw");
+    println!("{:?}", t);
 }
 
 fn common_prefix_length(a: &str, b: &str) -> usize {
@@ -145,6 +168,7 @@ fn common_prefix_length(a: &str, b: &str) -> usize {
 #[cfg(test)]
 #[test]
 fn test_common_prefix_length() {
+    assert_eq!(common_prefix_length("", "foo"), 0);
     assert_eq!(common_prefix_length("foo", "foo"), 3);
     assert_eq!(common_prefix_length("foo", "foobar"), 3);
     assert_eq!(common_prefix_length("foobar", "foo"), 3);
