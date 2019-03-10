@@ -1,6 +1,7 @@
 use std::fmt;
 
-enum Completion {
+#[derive(Debug, Eq, PartialEq)]
+pub enum Completion {
     Zero,
     One(String),
     Many,
@@ -30,7 +31,7 @@ impl AbbrevTree {
                     // Full match. Recurse. (Optimize for the case where item
                     // doesn't already exist.)
                     return subtree._add(&item[prefix_len..], false);
-                } else if prefix_len > 0 {
+                } else {
                     // Partial match. Split and then add.
                     let chunk_suffix = chunk.split_off(prefix_len);
                     let v: Vec<_> = subtree.0.drain(..).collect();
@@ -56,26 +57,46 @@ impl AbbrevTree {
         ));
     }
 
-    /*
-     *pub fn complete(&self, item: &self) -> Completion {
-     *    for (chunk, subtree) in &self.0 {
-     *        let prefix_len = common_prefix_length(chunk, item);
-     *        if prefix_len == chunk.len() {
-     *            // Full match. Recurse.
-     *            match subtree.complete(&item[prefix_len..]) {
-     *                Zero => return Zero,
-     *                One(mut s) => {
-     *                    s.insert_str(0, chunk);
-     *                    return One(s);
-     *                },
-     *                Many => return Many,
-     *            }
-     *        } else if prefix_len > 0 {
-     *            return Many;
-     *        }
-     *    }
-     *}
-     */
+    // TODO: This mega-sucks.
+    pub fn complete(&self, item: &str) -> Completion {
+        if self.0.len() == 0 && item == "" {
+            return Completion::One("".to_string());
+        }
+
+        for (chunk, subtree) in &self.0 {
+            let prefix_len = common_prefix_length(chunk, item);
+            if prefix_len > 0 {
+                if prefix_len == chunk.len() {
+                    // Full match. Recurse.
+                    match subtree.complete(&item[prefix_len..]) {
+                        Completion::Zero => return Completion::Zero,
+                        Completion::One(mut s) => {
+                            s.insert_str(0, chunk); // FIXME: bad
+                            return Completion::One(s);
+                        },
+                        Completion::Many => return Completion::Many,
+                    }
+                } else {
+                    // Partial match. One or Many.
+                    if subtree.0.len() >= 2 {
+                        return Completion::Many;
+                    } else if subtree.0.len() == 1 {
+                        unreachable!(); // TODO: Is it, though?
+                    } else {
+                        return Completion::One(chunk.clone());
+                    }
+                }
+            } else if chunk.len() == 0 {
+                return Completion::One("".to_string());
+            }
+        }
+
+        if item.len() > 0 {
+            Completion::Zero
+        } else {
+            Completion::Many
+        }
+    }
 }
 
 impl fmt::Debug for AbbrevTree {
@@ -146,6 +167,46 @@ fn test_abbrev_tree() {
 
     t.add("lshw");
     println!("{:?}", t);
+
+    assert_eq!(
+        t.complete("c"), Completion::Many
+    );
+    assert_eq!(
+        t.complete("ca"), Completion::Many
+    );
+    assert_eq!(
+        t.complete("cat"), Completion::One("cat".to_string())
+    );
+    assert_eq!(
+        t.complete("ch"), Completion::Many
+    );
+    assert_eq!(
+        t.complete("cho"), Completion::One("chown".to_string())
+    );
+    assert_eq!(
+        t.complete("chow"), Completion::One("chown".to_string())
+    );
+    assert_eq!(
+        t.complete("chown"), Completion::One("chown".to_string())
+    );
+    assert_eq!(
+        t.complete("l"), Completion::Many,
+    );
+    assert_eq!(
+        t.complete("ls"), Completion::Many,
+    );
+    assert_eq!(
+        t.complete("lsh"), Completion::One("lshw".to_string())
+    );
+    assert_eq!(
+        t.complete("lshw"), Completion::One("lshw".to_string())
+    );
+    assert_eq!(
+        t.complete("x"), Completion::Zero
+    );
+    assert_eq!(
+        t.complete("xyz"), Completion::Zero
+    );
 }
 
 fn common_prefix_length(a: &str, b: &str) -> usize {
