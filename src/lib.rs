@@ -69,15 +69,11 @@ impl AbbrevTree {
 
         for (chunk, subtree) in &self.0 {
             let prefix_len = common_prefix_length(chunk, item);
-            if prefix_len > 0 && item.len() <= prefix_len {
-                // item done. Add everything here.
+            if item == "" || item.len() == prefix_len
+                    || chunk.len() == prefix_len {
                 let mut s = left.to_string();
                 s.push_str(chunk);
-                subtree._complete(&s, "", v);
-            } else if item == "" {
-                let mut s = left.to_string();
-                s.push_str(chunk);
-                v.push(s);
+                subtree._complete(&s, &item[prefix_len..], v);
             }
         }
     }
