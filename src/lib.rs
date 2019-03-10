@@ -6,14 +6,11 @@ pub struct AbbrevTree<T> {
     pub data: T,
 }
 
-impl<T> AbbrevTree<T> {
-    // TODO: This should use Default::default().
-    pub fn new(data: T) -> Self {
-        AbbrevTree { v: Vec::new(), data }
-    }
-}
-
 impl<T: Default> AbbrevTree<T> {
+    pub fn new() -> Self {
+        AbbrevTree { v: Vec::new(), data: Default::default() }
+    }
+
     // TODO: Recursion is probably bad but oh well.
     pub fn add(&mut self, item: &str, data: T) {
         // Find match.
@@ -28,7 +25,7 @@ impl<T: Default> AbbrevTree<T> {
                         );
                         subtree.v.push((
                             "".to_string(),
-                            AbbrevTree::new(d),
+                            AbbrevTree { v: Vec::new(), data: d },
                         ))
                     }
                     return subtree.add(&item[prefix_len..], data);
@@ -49,7 +46,7 @@ impl<T: Default> AbbrevTree<T> {
         // Else add new subtree.
         self.v.push((
             item.to_string(),
-            AbbrevTree::new(data),
+            AbbrevTree { v: Vec::new(), data },
         ));
     }
 
@@ -107,7 +104,7 @@ impl<T> fmt::Debug for AbbrevTree<T> {
 #[cfg(test)]
 #[test]
 fn test_abbrev_tree() {
-    let mut t = AbbrevTree::new(());
+    let mut t = AbbrevTree::new();
     println!("{:?}", t);
     assert_eq!(t.v.len(), 0);
 
