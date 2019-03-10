@@ -14,8 +14,6 @@ impl AbbrevTree {
     // TODO: Recursion is probably bad but oh well.
     // TODO: is_root sucks.
     fn _add(&mut self, item: &str, is_root: bool) {
-        println!("add({:?})", item);
-
         // Find match.
         for (chunk, subtree) in &mut self.0 {
             let prefix_len = common_prefix_length(chunk, item);
@@ -63,33 +61,25 @@ impl AbbrevTree {
             left,
             item,
         );
+        println!("{:?}", self);
+
+        if self.0.len() == 0 && item == "" {
+            v.push(left.to_string());
+        }
+
         for (chunk, subtree) in &self.0 {
             let prefix_len = common_prefix_length(chunk, item);
-            if prefix_len > 0 {
-                if item.len() <= prefix_len {
-                    // Full or partial match. Recurse.
-                    let mut sub_left = left.to_string();
-                    sub_left.push_str(chunk);
-                    subtree._complete(
-                        &sub_left,
-                        &item[prefix_len..],
-                        v,
-                    );
-                }
-                // Else no match.
-            } else if item.len() == 0 {
-                // Zero-length match.
+            if prefix_len > 0 && item.len() <= prefix_len {
+                // item done. Add everything here.
+                let mut s = left.to_string();
+                s.push_str(chunk);
+                subtree._complete(&s, "", v);
+            } else if item == "" {
                 let mut s = left.to_string();
                 s.push_str(chunk);
                 v.push(s);
             }
         }
-
-        if item.len() == 0 {
-            // Zero-length match.
-            v.push(left.to_string());
-        }
-        // Else no match at all.
     }
 }
 
