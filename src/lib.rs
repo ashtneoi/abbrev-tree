@@ -1,12 +1,5 @@
 use std::fmt;
 
-#[derive(Debug, Eq, PartialEq)]
-pub enum Completion {
-    Zero,
-    One(String),
-    Many,
-}
-
 pub struct AbbrevTree(Vec<(String, AbbrevTree)>);
 
 impl AbbrevTree {
@@ -57,45 +50,46 @@ impl AbbrevTree {
         ));
     }
 
-    // TODO: This mega-sucks.
-    pub fn complete(&self, item: &str) -> Completion {
-        if self.0.len() == 0 && item == "" {
-            return Completion::One("".to_string());
-        }
+    pub fn complete(&self, item: &str) -> Vec<String> {
+        let mut v = Vec::new();
+        self._complete("", item, &mut v);
+        v
+    }
 
+    // TODO: This mega-sucks.
+    fn _complete(&self, left: &str, item: &str, v: &mut Vec<String>) {
+        println!(
+            "_complete({:?}, {:?}, v)",
+            left,
+            item,
+        );
         for (chunk, subtree) in &self.0 {
             let prefix_len = common_prefix_length(chunk, item);
             if prefix_len > 0 {
-                if prefix_len == chunk.len() {
-                    // Full match. Recurse.
-                    match subtree.complete(&item[prefix_len..]) {
-                        Completion::Zero => return Completion::Zero,
-                        Completion::One(mut s) => {
-                            s.insert_str(0, chunk); // FIXME: bad
-                            return Completion::One(s);
-                        },
-                        Completion::Many => return Completion::Many,
-                    }
-                } else {
-                    // Partial match. One or Many.
-                    if subtree.0.len() >= 2 {
-                        return Completion::Many;
-                    } else if subtree.0.len() == 1 {
-                        unreachable!(); // TODO: Is it, though?
-                    } else {
-                        return Completion::One(chunk.clone());
-                    }
+                if item.len() <= prefix_len {
+                    // Full or partial match. Recurse.
+                    let mut sub_left = left.to_string();
+                    sub_left.push_str(chunk);
+                    subtree._complete(
+                        &sub_left,
+                        &item[prefix_len..],
+                        v,
+                    );
                 }
-            } else if chunk.len() == 0 {
-                return Completion::One("".to_string());
+                // Else no match.
+            } else if item.len() == 0 {
+                // Zero-length match.
+                let mut s = left.to_string();
+                s.push_str(chunk);
+                v.push(s);
             }
         }
 
-        if item.len() > 0 {
-            Completion::Zero
-        } else {
-            Completion::Many
+        if item.len() == 0 {
+            // Zero-length match.
+            v.push(left.to_string());
         }
+        // Else no match at all.
     }
 }
 
@@ -168,45 +162,36 @@ fn test_abbrev_tree() {
     t.add("lshw");
     println!("{:?}", t);
 
-    assert_eq!(
-        t.complete("c"), Completion::Many
-    );
-    assert_eq!(
-        t.complete("ca"), Completion::Many
-    );
-    assert_eq!(
-        t.complete("cat"), Completion::One("cat".to_string())
-    );
-    assert_eq!(
-        t.complete("ch"), Completion::Many
-    );
-    assert_eq!(
-        t.complete("cho"), Completion::One("chown".to_string())
-    );
-    assert_eq!(
-        t.complete("chow"), Completion::One("chown".to_string())
-    );
-    assert_eq!(
-        t.complete("chown"), Completion::One("chown".to_string())
-    );
-    assert_eq!(
-        t.complete("l"), Completion::Many,
-    );
-    assert_eq!(
-        t.complete("ls"), Completion::Many,
-    );
-    assert_eq!(
-        t.complete("lsh"), Completion::One("lshw".to_string())
-    );
-    assert_eq!(
-        t.complete("lshw"), Completion::One("lshw".to_string())
-    );
-    assert_eq!(
-        t.complete("x"), Completion::Zero
-    );
-    assert_eq!(
-        t.complete("xyz"), Completion::Zero
-    );
+    assert_eq!(t.complete("c"), vec![
+        "cat".to_string(),
+        "cargo".to_string(),
+        "chmod".to_string(),
+        "chown".to_string(),
+    ]);
+    assert_eq!(t.complete("ca"), vec![
+        "cat".to_string(),
+        "cargo".to_string(),
+    ]);
+    assert_eq!(t.complete("cat"), vec!["cat".to_string()]);
+    assert_eq!(t.complete("ch"), vec![
+        "chmod".to_string(),
+        "chown".to_string(),
+    ]);
+    assert_eq!(t.complete("cho"), vec!["chown".to_string()]);
+    assert_eq!(t.complete("chow"), vec!["chown".to_string()]);
+    assert_eq!(t.complete("chown"), vec!["chown".to_string()]);
+    assert_eq!(t.complete("l"), vec![
+        "ls".to_string(),
+        "lshw".to_string(),
+    ]);
+    assert_eq!(t.complete("ls"), vec![
+        "ls".to_string(),
+        "lshw".to_string(),
+    ]);
+    assert_eq!(t.complete("lsh"), vec!["lshw".to_string()]);
+    assert_eq!(t.complete("lshw"), vec!["lshw".to_string()]);
+    assert_eq!(t.complete("x"), Vec::<String>::new());
+    assert_eq!(t.complete("xyz"), Vec::<String>::new());
 }
 
 fn common_prefix_length(a: &str, b: &str) -> usize {
