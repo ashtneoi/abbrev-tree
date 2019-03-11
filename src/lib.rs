@@ -56,7 +56,6 @@ impl<T: Default> AbbrevTree<T> {
         v
     }
 
-    // TODO: This mega-sucks.
     fn _complete<'d>(
         &'d self, left: &str, item: &str, v: &mut Vec<(String, &'d T)>
     ) {
@@ -66,6 +65,7 @@ impl<T: Default> AbbrevTree<T> {
 
         for (chunk, subtree) in &self.v {
             let prefix_len = common_prefix_length(chunk, item);
+            // TODO: Make sure this makes sense.
             if item == "" || item.len() == prefix_len
                     || chunk.len() == prefix_len {
                 let mut s = left.to_string();
@@ -79,7 +79,6 @@ impl<T: Default> AbbrevTree<T> {
         self._get_mut("", item)
     }
 
-    // TODO: This mega-sucks.
     fn _get_mut<'d>(&'d mut self, left: &str, item: &str) -> Option<&'d mut T> {
         if self.v.len() == 0 && item == "" {
             // We're a leaf and item is exhausted.
