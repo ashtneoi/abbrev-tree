@@ -1,6 +1,9 @@
+#[cfg(feature = "serde")]
+use serde::{Serialize, Deserialize};
 use std::fmt;
 use std::mem;
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AbbrevTree<T> {
     v: Vec<(String, AbbrevTree<T>)>,
     pub data: T,
