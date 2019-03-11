@@ -85,16 +85,19 @@ impl<T: Default> AbbrevTree<T> {
     // TODO: This mega-sucks.
     fn _get_mut<'d>(&'d mut self, left: &str, item: &str) -> Option<&'d mut T> {
         if self.v.len() == 0 && item == "" {
+            // We're a leaf and item is exhausted.
             return Some(&mut self.data);
         }
 
         for (chunk, subtree) in &mut self.v {
             let prefix_len = common_prefix_length(chunk, item);
-            if item.len() == prefix_len
-                    || chunk.len() == prefix_len {
+            if prefix_len == chunk.len() {
                 let mut s = left.to_string();
                 s.push_str(chunk);
-                return subtree._get_mut(&s, &item[prefix_len..]);
+                match subtree._get_mut(&s, &item[prefix_len..]) {
+                    Some(d) => return Some(d),
+                    None => (),
+                }
             }
         }
 
