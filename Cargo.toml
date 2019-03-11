@@ -4,12 +4,3 @@ version = "0.1.0"
 authors = ["ashtneoi <ashtneoi@gmail.com>"]
 edition = "2018"
 license = "MIT"
-
-[dependencies]
-serde = { version = "1.0.89", features = ["derive"], optional = true }
-serde_json = { version = "1.0.39", optional = true }
-
-[[bin]]
-name = "save_tree"
-path = "src/bin/save_tree.rs"
-required-features = ["serde", "serde_json"]
