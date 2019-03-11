@@ -2,6 +2,7 @@ use abbrev_tree::AbbrevTree;
 use std::io::{
     BufRead,
     stdin,
+    stdout,
 };
 
 fn main() {
@@ -15,5 +16,5 @@ fn main() {
             Err(e) => panic!("{}", e),
         }
     }
-    println!("{}", serde_json::to_string(&t).unwrap());
+    serde_json::to_writer(stdout().lock(), &t).unwrap();
 }
