@@ -4,6 +4,7 @@ use std::fmt;
 use std::mem;
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Default, Hash)]
 pub struct AbbrevTree<T> {
     v: Vec<(String, AbbrevTree<T>)>,
     pub data: T,
@@ -11,7 +12,7 @@ pub struct AbbrevTree<T> {
 
 impl<T: Default> AbbrevTree<T> {
     pub fn new() -> Self {
-        AbbrevTree { v: Vec::new(), data: Default::default() }
+        Default::default()
     }
 
     // TODO: Recursion is probably bad but oh well.
